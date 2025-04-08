@@ -16,83 +16,231 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { executeCode } from "@/lib/code-execution";
 import { ModeToggle } from "./theme-toggle";
-import { formatCode } from "@/lib/code-formatter";
-import { Loader2, Play, Send, FileCode } from "lucide-react";
+import { formatCode } from "@/lib/code-execution";
+import {
+  Loader2,
+  Play,
+  Send,
+  FileCode,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-// Sample problem data
-const sampleProblem = {
-  id: "two-sum",
-  title: "Two Sum",
-  description:
-    "Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\n" +
-    "You may assume that each input would have exactly one solution, and you may not use the same element twice.",
+// Define types for our problem structure
+interface TestCase {
+  input: any[];
+  expectedOutput: string;
+}
+
+interface ProblemStarter {
+  java: string;
+  cpp: string;
+  python: string;
+  [key: string]: string;
+}
+
+interface ProblemExample {
+  input: string;
+  output: string;
+  explanation?: string;
+}
+
+interface Problem {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: string;
+  constraints: string[];
+  examples: ProblemExample[];
+  hints: string[];
+  starterCode: ProblemStarter;
+  testCases: TestCase[];
+  hiddenTestCases: TestCase[];
+  timeLimit?: string;
+  memoryLimit?: string;
+}
+
+interface TestResult {
+  testCaseIndex: number;
+  input: any[];
+  expectedOutput: string;
+  actualOutput: string | null;
+  error: string | null;
+  passed: boolean;
+}
+
+interface CodeEditorPlatformProps {
+  problem?: Problem;
+}
+
+// Sample problem for testing in competitive programming format
+const sampleProblem: Problem = {
+  id: "watermelon-problem",
+  title: "A. Watermelon",
+  description: `One hot summer day Pete and his friend Billy decided to buy a watermelon. They chose the biggest and the ripest one, in their opinion. After that the watermelon was weighed, and the scales showed \`w\` kilos. They rushed home, dying of thirst, and decided to divide the berry, however they faced a hard problem.
+
+Pete and Billy are great fans of even numbers, that's why they want to divide the watermelon in such a way that each of the two parts weighs even number of kilos, at the same time it is not obligatory that the parts are equal. The boys are extremely tired and want to start their meal as soon as possible, that's why you should help them and find out, if they can divide the watermelon in the way they want. For sure, each of them should get a part of positive weight.`,
   difficulty: "Easy",
-  constraints: [
-    "2 <= nums.length <= 10^4",
-    "-10^9 <= nums[i] <= 10^9",
-    "-10^9 <= target <= 10^9",
-    "Only one valid answer exists",
-  ],
+  timeLimit: "1 second",
+  memoryLimit: "256 megabytes",
+  constraints: ["1 ≤ w ≤ 100", "w is an integer"],
   examples: [
     {
-      input: "nums = [2,7,11,15], target = 9",
-      output: "[0,1]",
-      explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
+      input: "8",
+      output: "YES",
+      explanation:
+        "The boys can divide the watermelon into two parts of 2 and 6 kilos respectively (another variant — two parts of 4 and 4 kilos).",
     },
     {
-      input: "nums = [3,2,4], target = 6",
-      output: "[1,2]",
-      explanation: "Because nums[1] + nums[2] == 6, we return [1, 2].",
+      input: "3",
+      output: "NO",
+      explanation:
+        "The boys cannot divide the watermelon into two parts of even weight.",
     },
   ],
   hints: [
-    "Can you use a hash map to solve this problem?",
-    "For each element, check if the target minus the current element exists in the array.",
-    "A brute force approach would be O(n²), but there's a more efficient O(n) solution.",
+    "Think about the parity of the number w.",
+    "Consider what makes a number dividable into two even parts.",
+    "Even numbers can be represented as 2k, where k is an integer.",
   ],
   starterCode: {
-    java: `class Solution {
-    public int[] twoSum(int[] nums, int target) {
-        // Your code here
-        return new int[]{0, 0};
+    java: `import java.util.*;
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int w = scanner.nextInt();
+        
+        // Solve the problem here
+        
+        // Output YES or NO
     }
 }`,
-    cpp: `vector<int> twoSum(vector<int>& nums, int target) {
-    // Your code here
-    return {0, 0};
+    cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    
+    int w;
+    cin >> w;
+    
+    // Solve the problem here
+    
+    // Output YES or NO
+    
+    return 0;
 }`,
-    python: `def two_sum(nums, target):
-    # Your code here
-    return [0, 0]`,
+    python: `# Read input
+w = int(input())
+
+# Solve the problem here
+
+# Output YES or NO
+`,
   },
   testCases: [
-    { input: [[2, 7, 11, 15], 9], expectedOutput: "[0, 1]" },
-    { input: [[3, 2, 4], 6], expectedOutput: "[1, 2]" },
-    { input: [[3, 3], 6], expectedOutput: "[0, 1]" },
+    {
+      input: ["8"],
+      expectedOutput: "YES",
+    },
+    {
+      input: ["3"],
+      expectedOutput: "NO",
+    },
   ],
   hiddenTestCases: [
-    { input: [[1, 2, 3, 4, 5], 9], expectedOutput: "[3, 4]" },
-    { input: [[5, 25, 75], 100], expectedOutput: "[1, 2]" },
-    { input: [[-1, -2, -3, -4, -5], -8], expectedOutput: "[2, 4]" },
-    { input: [[0, 4, 3, 0], 0], expectedOutput: "[0, 3]" },
+    {
+      input: ["2"],
+      expectedOutput: "NO",
+    },
+    {
+      input: ["100"],
+      expectedOutput: "YES",
+    },
+    {
+      input: ["1"],
+      expectedOutput: "NO",
+    },
+    {
+      input: ["4"],
+      expectedOutput: "YES",
+    },
+    {
+      input: ["98"],
+      expectedOutput: "YES",
+    },
   ],
 };
 
-export default function CodeEditorPlatform() {
-  const [language, setLanguage] = useState("python");
-  const [code, setCode] = useState(sampleProblem.starterCode.python);
-  const [results, setResults] = useState<any>(null);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [isFormatting, setIsFormatting] = useState(false);
+export default function CodeEditorPlatform({
+  problem,
+}: CodeEditorPlatformProps) {
+  // Use the provided problem or fall back to the sample problem
+  const currentProblem: Problem = problem || sampleProblem;
+
+  const [language, setLanguage] = useState<string>("cpp"); // Default to C++ for competitive programming
+  const [code, setCode] = useState<string>(
+    currentProblem.starterCode.cpp || ""
+  );
+  const [results, setResults] = useState<TestResult[] | null>(null);
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [isFormatting, setIsFormatting] = useState<boolean>(false);
+  const [showProblem, setShowProblem] = useState<boolean>(true);
   const { toast } = useToast();
+
+  // Update code when problem changes
+  useEffect(() => {
+    if (
+      currentProblem &&
+      currentProblem.starterCode &&
+      currentProblem.starterCode[language]
+    ) {
+      setCode(currentProblem.starterCode[language]);
+    }
+  }, [currentProblem, language]);
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
-    setCode(
-      sampleProblem.starterCode[
-        newLanguage as keyof typeof sampleProblem.starterCode
-      ] || ""
-    );
+    if (currentProblem.starterCode && currentProblem.starterCode[newLanguage]) {
+      setCode(currentProblem.starterCode[newLanguage]);
+    } else {
+      // Default empty templates if no starter code is available
+      const defaultTemplates: Record<string, string> = {
+        java: `import java.util.*;
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        
+        // Read input and solve the problem
+        
+        // Output the result
+    }
+}`,
+        cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    
+    // Read input and solve the problem
+    
+    // Output the result
+    
+    return 0;
+}`,
+        python: `# Read input and solve the problem
+
+# Output the result
+`,
+      };
+      setCode(defaultTemplates[newLanguage] || "");
+    }
     setResults(null);
   };
 
@@ -130,6 +278,23 @@ export default function CodeEditorPlatform() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [code, language]);
 
+  // Handle responsive breakpoints
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setShowProblem(false);
+      } else {
+        setShowProblem(true);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const runCode = async () => {
     setIsExecuting(true);
     setResults(null);
@@ -138,10 +303,11 @@ export default function CodeEditorPlatform() {
       const executionResults = await executeCode(
         code,
         language,
-        sampleProblem.testCases
+        currentProblem.testCases
       );
       setResults(executionResults);
     } catch (error) {
+      console.error("Error executing code:", error);
       toast({
         title: "Execution Error",
         description:
@@ -160,14 +326,14 @@ export default function CodeEditorPlatform() {
     try {
       // Combine visible and hidden test cases for submission
       const allTestCases = [
-        ...sampleProblem.testCases,
-        ...sampleProblem.hiddenTestCases,
+        ...currentProblem.testCases,
+        ...currentProblem.hiddenTestCases,
       ];
       const executionResults = await executeCode(code, language, allTestCases);
       setResults(executionResults);
 
       // Check if all test cases passed
-      const allPassed = executionResults.every((result: any) => result.passed);
+      const allPassed = executionResults.every((result) => result.passed);
 
       toast({
         title: allPassed ? "All tests passed!" : "Some tests failed",
@@ -177,6 +343,7 @@ export default function CodeEditorPlatform() {
         variant: allPassed ? "default" : "destructive",
       });
     } catch (error) {
+      console.error("Error submitting code:", error);
       toast({
         title: "Submission Error",
         description:
@@ -188,30 +355,65 @@ export default function CodeEditorPlatform() {
     }
   };
 
+  const toggleProblemView = () => {
+    setShowProblem(!showProblem);
+  };
+
   return (
-    <div className="container mx-auto p-4 space-y-4">
+    <div className="container mx-auto p-2 md:p-4 space-y-4 h-screen flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-        <h1 className="text-2xl font-bold">Code Challenge Platform</h1>
+        <h1 className="text-xl md:text-2xl font-bold">
+          Competitive Coding Platform
+        </h1>
         <div className="flex items-center gap-2">
           <ModeToggle />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-140px)]">
-        <Card className="p-4 lg:col-span-1 overflow-auto">
-          <ProblemDescription problem={sampleProblem} />
-        </Card>
-
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          <Card className="p-4 flex-grow flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-grow overflow-hidden">
+        {/* Mobile toggle for problem view */}
+        <div className="lg:hidden w-full flex justify-end mb-2">
+          <Button
+            variant="outline"
+            onClick={toggleProblemView}
+            className="flex items-center gap-1"
+          >
+            {showProblem ? (
+              <>
+                <span>Hide Problem</span>
+                <ChevronLeft className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                <span>Show Problem</span>
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
+        {/* Problem description panel */}
+        {(showProblem || window.innerWidth >= 1024) && (
+          <Card className="p-4 lg:col-span-4 overflow-auto max-h-[calc(100vh-220px)] md:max-h-[calc(100vh-180px)]">
+            <ProblemDescription problem={currentProblem} />
+          </Card>
+        )}
+        {/* Editor and test results panel */}
+        {/* // Update only the editor and test results panel section in
+        CodeEditorPlatform */}
+        {/* Editor and test results panel */}
+        <div
+          className={`${showProblem ? "lg:col-span-8" : "col-span-12"} flex flex-col gap-4 max-h-[calc(100vh-220px)] md:max-h-[calc(100vh-180px)]`}
+        >
+          {/* Code Editor Card */}
+          <Card className="p-4 flex-grow flex flex-col h-[60%]">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Select
-                  defaultValue="python"
+                  defaultValue={language}
                   onValueChange={handleLanguageChange}
                   value={language}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[140px] md:w-[180px]">
                     <SelectValue placeholder="Select Language" />
                   </SelectTrigger>
                   <SelectContent>
@@ -248,7 +450,7 @@ export default function CodeEditorPlatform() {
                   ) : (
                     <Play className="mr-2 h-4 w-4" />
                   )}
-                  Run Code
+                  Run
                 </Button>
                 <Button
                   onClick={submitCode}
@@ -265,13 +467,18 @@ export default function CodeEditorPlatform() {
               </div>
             </div>
 
-            <div className="flex-grow">
+            <div className="flex-grow min-h-[200px] overflow-hidden">
               <CodeEditor code={code} language={language} onChange={setCode} />
             </div>
           </Card>
 
-          <Card className="p-4 h-1/3 overflow-auto">
-            <TestResults results={results} isLoading={isExecuting} />
+          {/* Test Results Card */}
+          <Card className="p-4 h-[40%] overflow-auto">
+            <TestResults
+              results={results}
+              isLoading={isExecuting}
+              language={language}
+            />
           </Card>
         </div>
       </div>

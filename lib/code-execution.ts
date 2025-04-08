@@ -1,95 +1,111 @@
+import { toast } from "@/hooks/use-toast";
+
 interface TestCase {
-  input: any[]
-  expectedOutput: string
+  input: any[];
+  expectedOutput: string;
 }
 
-// This function would normally call the Piston API
-// For this example, we'll simulate code execution
-export async function executeCode(code: string, language: string, testCases: TestCase[]) {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+interface TestResult {
+  testCaseIndex: number;
+  input: any[];
+  expectedOutput: string;
+  actualOutput: string | null;
+  error: string | null;
+  passed: boolean;
+}
 
-  const results = []
+interface ExecutionResponse {
+  results: TestResult[];
+  error?: string;
+}
 
-  for (const testCase of testCases) {
-    try {
-      let actualOutput
-      let error
+/**
+ * Execute code against test cases
+ * @param code The code to execute
+ * @param language The programming language
+ * @param testCases Test cases to run against the code
+ * @returns Results of the code execution
+ */
+export async function executeCode(
+  code: string,
+  language: string,
+  testCases: TestCase[]
+): Promise<TestResult[]> {
+  try {
+    const response = await fetch("/api/execute-code", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        code,
+        language,
+        testCases,
+      }),
+    });
 
-      if (language === "java") {
-        actualOutput = simulateJavaExecution(code, testCase.input)
-      } else if (language === "cpp") {
-        actualOutput = simulateCppExecution(code, testCase.input)
-      } else if (language === "python") {
-        actualOutput = simulatePythonExecution(code, testCase.input)
-      } else {
-        throw new Error("Unsupported language")
-      }
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to execute code");
+    }
 
-      const passed = actualOutput === testCase.expectedOutput
+    const data: ExecutionResponse = await response.json();
 
-      results.push({
-        input: testCase.input,
-        expectedOutput: testCase.expectedOutput,
-        actualOutput,
-        passed,
-        error,
-      })
-    } catch (error) {
-      results.push({
-        input: testCase.input,
-        expectedOutput: testCase.expectedOutput,
-        actualOutput: "Error",
-        passed: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      })
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data.results;
+  } catch (error) {
+    console.error("Error executing code:", error);
+    if (error instanceof Error) {
+      toast({
+        title: "Execution Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    } else {
+      const genericError = new Error(
+        "An unknown error occurred during code execution"
+      );
+      toast({
+        title: "Execution Error",
+        description: "An unknown error occurred during code execution",
+        variant: "destructive",
+      });
+      throw genericError;
     }
   }
-
-  return results
 }
 
-// Simulate Python execution (very simplified)
-function simulatePythonExecution(code: string, inputs: any[]) {
-  // This is just a simulation
-  // In a real app, you would use the Piston API to execute Python code
+/**
+ * Format code using Prettier
+ * @param code The code to format
+ * @param language The programming language
+ * @returns Formatted code
+ */
+export async function formatCode(
+  code: string,
+  language: string
+): Promise<string> {
+  try {
+    const languageMap: Record<string, string> = {
+      cpp: "cpp",
+      java: "java",
+      python: "python",
+    };
 
-  // Check if the code contains a proper implementation
-  if (code.includes("return a + b") || code.includes("return a+b")) {
-    return String(inputs[0] + inputs[1])
+    const formatterLanguage = languageMap[language] || language;
+
+    // Return unformatted code for now since we're not actually formatting in this version
+    return code;
+  } catch (error) {
+    console.error("Error formatting code:", error);
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error("An unknown error occurred during code formatting");
+    }
   }
-
-  // Simple pattern matching for common solutions
-  if (code.includes("a + b")) {
-    return String(inputs[0] + inputs[1])
-  }
-
-  return "Error"
 }
-
-// Simulate Java execution (very simplified)
-function simulateJavaExecution(code: string, inputs: any[]) {
-  // This is just a simulation
-  // In a real app, you would use the Piston API to execute Java code
-
-  // Check if the code contains a proper implementation
-  if (code.includes("return a + b") || code.includes("return a+b")) {
-    return String(inputs[0] + inputs[1])
-  }
-
-  return "Error"
-}
-
-// Simulate C++ execution (very simplified)
-function simulateCppExecution(code: string, inputs: any[]) {
-  // This is just a simulation
-  // In a real app, you would use the Piston API to execute C++ code
-
-  // Check if the code contains a proper implementation
-  if (code.includes("return a + b") || code.includes("return a+b")) {
-    return String(inputs[0] + inputs[1])
-  }
-
-  return "Error"
-}
-
