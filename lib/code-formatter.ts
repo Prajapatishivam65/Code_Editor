@@ -20,12 +20,11 @@ export async function formatCode(
       });
       return formattedCode;
     } else if (language === "cpp") {
-      // Simple indentation-based formatter for C++
+      // Enhanced indentation-based formatter for C++
       return formatCpp(code);
     } else if (language === "python") {
-      // Python formatting - could use Black.js or simple indentation
-      // For now, just return the original code
-      return code;
+      // Python formatting using indentation rules
+      return formatPython(code);
     } else {
       // For unsupported languages, return the original code instead of throwing
       console.warn(`Formatting not supported for language: ${language}`);
@@ -41,35 +40,83 @@ export async function formatCode(
 function formatCpp(code: string): string {
   const lines = code.split("\n");
   let indentLevel = 0;
-  const formattedLines = lines.map((line) => {
+  const formattedLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+
     // Preserve empty lines
-    if (line.trim() === "") {
-      return "";
+    if (line === "") {
+      formattedLines.push("");
+      continue;
     }
 
-    // Handle opening braces on their own line
-    if (line.trim() === "{") {
-      const indentedLine = "    ".repeat(indentLevel) + "{";
-      indentLevel++;
-      return indentedLine;
-    }
-
-    // Handle closing braces
-    if (line.trim().startsWith("}")) {
+    // Check for closing braces at start of line
+    if (line.startsWith("}")) {
       indentLevel = Math.max(0, indentLevel - 1);
-      return "    ".repeat(indentLevel) + line.trim();
     }
 
-    // Handle lines with both opening and closing braces
-    if (line.trim().endsWith("{")) {
-      const indentedLine = "    ".repeat(indentLevel) + line.trim();
+    // Format the current line with proper indentation
+    const indentedLine = "    ".repeat(indentLevel) + line;
+    formattedLines.push(indentedLine);
+
+    // Check for opening braces at end of line to increase indent for next line
+    const openBraceCount = (line.match(/{/g) || []).length;
+    const closeBraceCount = (line.match(/}/g) || []).length;
+
+    // Adjust indent level for next line
+    indentLevel += openBraceCount - closeBraceCount;
+
+    // If line ends with an opening brace and the next line isn't just a closing brace,
+    // increase the indent level
+    if (
+      line.endsWith("{") &&
+      i < lines.length - 1 &&
+      !lines[i + 1].trim().startsWith("}")
+    ) {
       indentLevel++;
-      return indentedLine;
     }
 
-    // Regular lines
-    return "    ".repeat(indentLevel) + line.trim();
-  });
+    // Ensure indentLevel doesn't go negative
+    indentLevel = Math.max(0, indentLevel);
+  }
+
+  return formattedLines.join("\n");
+}
+
+function formatPython(code: string): string {
+  const lines = code.split("\n");
+  let indentLevel = 0;
+  const formattedLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+
+    // Preserve empty lines
+    if (line === "") {
+      formattedLines.push("");
+      continue;
+    }
+
+    // Check for dedent keywords
+    if (
+      line.startsWith("else:") ||
+      line.startsWith("elif ") ||
+      line.startsWith("except") ||
+      line.startsWith("finally:")
+    ) {
+      indentLevel = Math.max(0, indentLevel - 1);
+    }
+
+    // Format the current line with proper indentation
+    const indentedLine = "    ".repeat(indentLevel) + line;
+    formattedLines.push(indentedLine);
+
+    // Check for indent keywords
+    if (line.endsWith(":")) {
+      indentLevel++;
+    }
+  }
 
   return formattedLines.join("\n");
 }

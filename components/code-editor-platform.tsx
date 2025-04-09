@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import CodeEditor from "./code-editor";
 import ProblemDescription from "./problem-description";
 import TestResults from "./test-results";
@@ -15,8 +15,9 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { executeCode } from "@/lib/code-execution";
+import { formatCode } from "@/lib/code-formatter";
 import { ModeToggle } from "./theme-toggle";
-import { formatCode } from "@/lib/code-execution";
+import { useMobile } from "@/hooks/use-mobile";
 import {
   Loader2,
   Play,
@@ -24,7 +25,11 @@ import {
   FileCode,
   ChevronLeft,
   ChevronRight,
+  Code2,
+  FileText,
+  LayoutPanelLeft,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Define types for our problem structure
 interface TestCase {
@@ -67,6 +72,7 @@ interface TestResult {
   actualOutput: string | null;
   error: string | null;
   passed: boolean;
+  isHidden?: boolean;
 }
 
 interface CodeEditorPlatformProps {
@@ -75,102 +81,136 @@ interface CodeEditorPlatformProps {
 
 // Sample problem for testing in competitive programming format
 const sampleProblem: Problem = {
-  id: "watermelon-problem",
-  title: "A. Watermelon",
-  description: `One hot summer day Pete and his friend Billy decided to buy a watermelon. They chose the biggest and the ripest one, in their opinion. After that the watermelon was weighed, and the scales showed \`w\` kilos. They rushed home, dying of thirst, and decided to divide the berry, however they faced a hard problem.
+  id: "remove-blockers-to-see",
+  title: "Remove the Blockers!",
+  description: `At the cultural fest, Anaya finds herself stuck in a crowd again. This time, she doesn't want to move — instead, she wonders if removing some blockers ahead could help her get a clear view.
 
-Pete and Billy are great fans of even numbers, that's why they want to divide the watermelon in such a way that each of the two parts weighs even number of kilos, at the same time it is not obligatory that the parts are equal. The boys are extremely tired and want to start their meal as soon as possible, that's why you should help them and find out, if they can divide the watermelon in the way they want. For sure, each of them should get a part of positive weight.`,
-  difficulty: "Easy",
+There are N students in a queue, with heights given in the array H. Anaya is standing at the **front** of the queue (index 0), and she can only see the performance if **no student ahead of her in the queue (i.e., to the right) is taller than or equal to her**.
+
+She has the ability to remove any number of students ahead of her to get a clear view. Your task is to calculate the **minimum number of students that need to be removed** so Anaya can see the performance.
+
+If she can already see, the answer is 0.`,
+
+  difficulty: "Medium",
   timeLimit: "1 second",
   memoryLimit: "256 megabytes",
-  constraints: ["1 ≤ w ≤ 100", "w is an integer"],
+  constraints: ["1 ≤ T ≤ 100", "2 ≤ N ≤ 100", "1 ≤ H[i] ≤ 100"],
   examples: [
     {
-      input: "8",
-      output: "YES",
-      explanation:
-        "The boys can divide the watermelon into two parts of 2 and 6 kilos respectively (another variant — two parts of 4 and 4 kilos).",
-    },
-    {
-      input: "3",
-      output: "NO",
-      explanation:
-        "The boys cannot divide the watermelon into two parts of even weight.",
+      input: `3
+5
+5 4 3 2 1
+4
+4 5 3 2
+6
+6 6 6 6 6 6`,
+      output: `0
+1
+5`,
+      explanation: `Test Case 1:
+Anaya (height 5) is already taller than all to her right — no need to remove anyone.
+
+Test Case 2:
+Only student at index 1 (height 5) blocks her view — remove them.
+
+Test Case 3:
+All students have the same height (6) — Anaya must remove everyone else to see the stage.`,
     },
   ],
   hints: [
-    "Think about the parity of the number w.",
-    "Consider what makes a number dividable into two even parts.",
-    "Even numbers can be represented as 2k, where k is an integer.",
+    "Iterate through the heights to the right of Anaya.",
+    "Count how many students are taller than or equal to Anaya.",
+    "Removing the minimum such students gives the answer.",
   ],
   starterCode: {
-    java: `import java.util.*;
-import java.io.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        int w = scanner.nextInt();
-        
-        // Solve the problem here
-        
-        // Output YES or NO
-    }
-}`,
     cpp: `#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-    
-    int w;
-    cin >> w;
-    
-    // Solve the problem here
-    
-    // Output YES or NO
-    
+    int T;
+    cin >> T;
+    while (T--) {
+        int N;
+        cin >> N;
+        vector<int> H(N);
+        for (int &h : H) cin >> h;
+
+        int blockers = 0;
+        for (int i = 1; i < N; ++i) {
+            if (H[i] >= H[0]) {
+                blockers++;
+            }
+        }
+
+        cout << blockers << endl;
+    }
     return 0;
-}`,
-    python: `# Read input
-w = int(input())
+}
+`,
+    java: `import java.util.*;
 
-# Solve the problem here
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int T = sc.nextInt();
+        while (T-- > 0) {
+            int N = sc.nextInt();
+            int[] H = new int[N];
+            for (int i = 0; i < N; i++) {
+                H[i] = sc.nextInt();
+            }
 
-# Output YES or NO
+            int blockers = 0;
+            for (int i = 1; i < N; i++) {
+                if (H[i] >= H[0]) {
+                    blockers++;
+                }
+            }
+
+            System.out.println(blockers);
+        }
+    }
+}
+`,
+    python: `T = int(input())
+for _ in range(T):
+    N = int(input())
+    H = list(map(int, input().split()))
+    blockers = 0
+
+    for i in range(1, N):
+        if H[i] >= H[0]:
+            blockers += 1
+
+    print(blockers)
 `,
   },
   testCases: [
     {
-      input: ["8"],
-      expectedOutput: "YES",
+      input: ["1", "5", "5 4 3 2 1"],
+      expectedOutput: "0",
     },
     {
-      input: ["3"],
-      expectedOutput: "NO",
+      input: ["1", "4", "4 5 3 2"],
+      expectedOutput: "1",
+    },
+    {
+      input: ["1", "6", "6 6 6 6 6 6"],
+      expectedOutput: "5",
     },
   ],
   hiddenTestCases: [
     {
-      input: ["2"],
-      expectedOutput: "NO",
+      input: ["1", "4", "3 4 5 2"],
+      expectedOutput: "2",
     },
     {
-      input: ["100"],
-      expectedOutput: "YES",
+      input: ["1", "3", "7 2 1"],
+      expectedOutput: "0",
     },
     {
-      input: ["1"],
-      expectedOutput: "NO",
-    },
-    {
-      input: ["4"],
-      expectedOutput: "YES",
-    },
-    {
-      input: ["98"],
-      expectedOutput: "YES",
+      input: ["1", "5", "1 2 3 4 5"],
+      expectedOutput: "4",
     },
   ],
 };
@@ -189,7 +229,12 @@ export default function CodeEditorPlatform({
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [isFormatting, setIsFormatting] = useState<boolean>(false);
   const [showProblem, setShowProblem] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>("editor");
   const { toast } = useToast();
+  const isMobile = useMobile();
+
+  // Add ref for test results section to scroll to after execution
+  const testResultsRef = useRef<HTMLDivElement>(null);
 
   // Update code when problem changes
   useEffect(() => {
@@ -201,6 +246,11 @@ export default function CodeEditorPlatform({
       setCode(currentProblem.starterCode[language]);
     }
   }, [currentProblem, language]);
+
+  // Set initial showProblem state based on screen size
+  useEffect(() => {
+    setShowProblem(!isMobile);
+  }, [isMobile]);
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
@@ -278,26 +328,23 @@ int main() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [code, language]);
 
-  // Handle responsive breakpoints
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setShowProblem(false);
-      } else {
-        setShowProblem(true);
-      }
-    };
-
-    // Set initial state
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  // Function to scroll to test results section
+  const scrollToResults = () => {
+    if (testResultsRef.current) {
+      // Slight delay to ensure the DOM is updated
+      setTimeout(() => {
+        testResultsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }
+  };
 
   const runCode = async () => {
     setIsExecuting(true);
     setResults(null);
+    setActiveTab("results");
 
     try {
       const executionResults = await executeCode(
@@ -305,7 +352,17 @@ int main() {
         language,
         currentProblem.testCases
       );
-      setResults(executionResults);
+
+      // Mark visible test cases
+      const resultsWithVisibility = executionResults.map((result) => ({
+        ...result,
+        isHidden: false,
+      }));
+
+      setResults(resultsWithVisibility);
+
+      // Scroll to results after execution completes
+      scrollToResults();
     } catch (error) {
       console.error("Error executing code:", error);
       toast({
@@ -322,6 +379,7 @@ int main() {
   const submitCode = async () => {
     setIsExecuting(true);
     setResults(null);
+    setActiveTab("results");
 
     try {
       // Combine visible and hidden test cases for submission
@@ -330,7 +388,15 @@ int main() {
         ...currentProblem.hiddenTestCases,
       ];
       const executionResults = await executeCode(code, language, allTestCases);
-      setResults(executionResults);
+
+      // Mark which test cases are visible vs hidden
+      const visibleCount = currentProblem.testCases.length;
+      const resultsWithVisibility = executionResults.map((result, index) => ({
+        ...result,
+        isHidden: index >= visibleCount,
+      }));
+
+      setResults(resultsWithVisibility);
 
       // Check if all test cases passed
       const allPassed = executionResults.every((result) => result.passed);
@@ -342,6 +408,9 @@ int main() {
           : "Your solution didn't pass all test cases. Please review and try again.",
         variant: allPassed ? "default" : "destructive",
       });
+
+      // Scroll to results after submission completes
+      scrollToResults();
     } catch (error) {
       console.error("Error submitting code:", error);
       toast({
@@ -360,8 +429,8 @@ int main() {
   };
 
   return (
-    <div className="container mx-auto p-2 md:p-4 space-y-4 h-screen flex flex-col">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+    <div className="flex flex-col h-screen w-full overflow-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-2 md:p-4 border-b">
         <h1 className="text-xl md:text-2xl font-bold">
           Competitive Coding Platform
         </h1>
@@ -370,7 +439,7 @@ int main() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-grow overflow-hidden">
+      <div className="flex-grow overflow-auto px-2 md:px-4 pb-2 md:pb-4">
         {/* Mobile toggle for problem view */}
         <div className="lg:hidden w-full flex justify-end mb-2">
           <Button
@@ -391,95 +460,165 @@ int main() {
             )}
           </Button>
         </div>
-        {/* Problem description panel */}
-        {(showProblem || window.innerWidth >= 1024) && (
-          <Card className="p-4 lg:col-span-4 overflow-auto max-h-[calc(100vh-220px)] md:max-h-[calc(100vh-180px)]">
-            <ProblemDescription problem={currentProblem} />
-          </Card>
-        )}
-        {/* Editor and test results panel */}
-        {/* // Update only the editor and test results panel section in
-        CodeEditorPlatform */}
-        {/* Editor and test results panel */}
-        <div
-          className={`${showProblem ? "lg:col-span-8" : "col-span-12"} flex flex-col gap-4 max-h-[calc(100vh-220px)] md:max-h-[calc(100vh-180px)]`}
-        >
-          {/* Code Editor Card */}
-          <Card className="p-4 flex-grow flex flex-col h-[60%]">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Select
-                  defaultValue={language}
-                  onValueChange={handleLanguageChange}
-                  value={language}
-                >
-                  <SelectTrigger className="w-[140px] md:w-[180px]">
-                    <SelectValue placeholder="Select Language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="java">Java</SelectItem>
-                    <SelectItem value="cpp">C++</SelectItem>
-                    <SelectItem value="python">Python</SelectItem>
-                  </SelectContent>
-                </Select>
 
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleFormatCode}
-                  disabled={isFormatting}
-                  title="Format Code (Ctrl+S / Cmd+S)"
-                >
-                  {isFormatting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileCode className="h-4 w-4" />
-                  )}
-                </Button>
+        {/* Main content area - scrollable */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-full">
+          {/* Problem description panel */}
+          {showProblem && (
+            <Card className="p-0 lg:col-span-4 overflow-hidden max-h-[calc(100vh-140px)]">
+              <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-medium">Problem Description</h3>
+                </div>
+                <div className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {currentProblem.difficulty}
+                </div>
+              </div>
+              <ProblemDescription problem={currentProblem} />
+            </Card>
+          )}
+
+          {/* Editor and test results panel */}
+          <div
+            className={`${showProblem ? "lg:col-span-8" : "col-span-12"} flex flex-col gap-4`}
+          >
+            {/* Code Editor Card */}
+            <Card className="p-0 flex flex-col min-h-[60vh] overflow-hidden">
+              <div className="bg-muted/50 px-4 py-2 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <LayoutPanelLeft className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-medium">Code Editor</h3>
+                  <Select
+                    defaultValue={language}
+                    onValueChange={handleLanguageChange}
+                    value={language}
+                  >
+                    <SelectTrigger className="w-[140px] md:w-[180px] h-8 text-xs">
+                      <SelectValue placeholder="Select Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="java">Java</SelectItem>
+                      <SelectItem value="cpp">C++</SelectItem>
+                      <SelectItem value="python">Python</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFormatCode}
+                    disabled={isFormatting}
+                    title="Format Code (Ctrl+S / Cmd+S)"
+                    className="h-8"
+                  >
+                    {isFormatting ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <FileCode className="h-3 w-3 mr-1" />
+                    )}
+                    Format
+                  </Button>
+                </div>
+
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={runCode}
+                    disabled={isExecuting || isFormatting}
+                    className="flex-1 sm:flex-none h-8"
+                  >
+                    {isExecuting ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <Play className="mr-1 h-3 w-3" />
+                    )}
+                    Run
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={submitCode}
+                    disabled={isExecuting || isFormatting}
+                    className="flex-1 sm:flex-none h-8"
+                  >
+                    {isExecuting ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <Send className="mr-1 h-3 w-3" />
+                    )}
+                    Submit
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  onClick={runCode}
-                  disabled={isExecuting || isFormatting}
-                  className="flex-1 sm:flex-none"
+              {/* Mobile tabs for editor and results */}
+              <div className="lg:hidden">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
                 >
-                  {isExecuting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="mr-2 h-4 w-4" />
-                  )}
-                  Run
-                </Button>
-                <Button
-                  onClick={submitCode}
-                  disabled={isExecuting || isFormatting}
-                  className="flex-1 sm:flex-none"
-                >
-                  {isExecuting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-2 h-4 w-4" />
-                  )}
-                  Submit
-                </Button>
+                  <TabsList className="w-full grid grid-cols-2">
+                    <TabsTrigger
+                      value="editor"
+                      className="flex items-center gap-1"
+                    >
+                      <Code2 className="h-3.5 w-3.5" />
+                      Editor
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="results"
+                      className="flex items-center gap-1"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Results
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="editor" className="m-0 p-0">
+                    <div className="h-[calc(100vh-300px)]">
+                      <CodeEditor
+                        code={code}
+                        language={language}
+                        onChange={setCode}
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="results" className="m-0 p-0">
+                    <div className="p-4 h-[calc(100vh-300px)] overflow-auto">
+                      <TestResults
+                        results={results}
+                        isLoading={isExecuting}
+                        language={language}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
-            </div>
 
-            <div className="flex-grow min-h-[200px] overflow-hidden">
-              <CodeEditor code={code} language={language} onChange={setCode} />
-            </div>
-          </Card>
+              {/* Desktop layout for editor and results */}
+              <div className="hidden lg:flex flex-col flex-grow">
+                <div className="flex-grow overflow-hidden">
+                  <CodeEditor
+                    code={code}
+                    language={language}
+                    onChange={setCode}
+                  />
+                </div>
 
-          {/* Test Results Card */}
-          <Card className="p-4 h-[40%] overflow-auto">
-            <TestResults
-              results={results}
-              isLoading={isExecuting}
-              language={language}
-            />
-          </Card>
+                {/* Test Results Card with ref for scrolling */}
+                <div ref={testResultsRef} className="scroll-mt-4 border-t">
+                  <div className="p-4 max-h-[30vh] overflow-auto">
+                    <TestResults
+                      results={results}
+                      isLoading={isExecuting}
+                      language={language}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

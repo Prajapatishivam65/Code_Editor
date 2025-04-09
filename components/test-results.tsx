@@ -56,7 +56,7 @@ export default function TestResults({
   const hiddenResults = results.filter((result) => result.isHidden);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Test Results</h3>
         <div className="flex items-center gap-2">
